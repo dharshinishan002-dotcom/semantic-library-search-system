@@ -1,5 +1,23 @@
+# virtual environment
+.venv/
 venv/
+
+# python cache
 __pycache__/
 *.pyc
+
+# environment files
 .env
+
+# FAISS index
+faiss_index.bin
+
+# databases
+*.db
+
+# dataset folder
 rag_chunking_project/data/
+
+# OS junk
+.DS_Store
+Thumbs.db

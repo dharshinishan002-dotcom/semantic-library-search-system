@@ -1,38 +1,35 @@
 import os
 from pypdf import PdfReader
 
-# get current script folder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# go to data folder safely
-DATA_FOLDER = os.path.join(BASE_DIR, "..", "data", "clean_research_papers")
-
-
-def load_pdf(file_path):
-    reader = PdfReader(file_path)
-    text = ""
-
-    for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + "\n"
-
-    return text
+DATA_FOLDER = "rag_chunking_project/data/clean_research_papers"
 
 
 def load_all_pdfs():
-    files = os.listdir(DATA_FOLDER)
 
     documents = []
 
-    for f in files:
-        path = os.path.join(DATA_FOLDER, f)
+    files = os.listdir(DATA_FOLDER)
 
-        print("Loading:", f)
+    for file in files:
 
-        text = load_pdf(path)
+        if file.endswith(".pdf"):
 
-        documents.append(text)
+            print("Loading:", file)
+
+            path = os.path.join(DATA_FOLDER, file)
+
+            reader = PdfReader(path)
+
+            for page_number, page in enumerate(reader.pages):
+
+                text = page.extract_text()
+
+                if text:
+                    documents.append({
+                        "book_name": file,
+                        "page": page_number + 1,
+                        "text": text
+                    })
 
     return documents
 
@@ -41,7 +38,8 @@ if __name__ == "__main__":
 
     docs = load_all_pdfs()
 
-    print("\nTotal documents loaded:", len(docs))
+    print("Total pages loaded:", len(docs))
 
-    print("\nSample text:\n")
-    print(docs[0][:500])
+    print("\nSample output:\n")
+
+    print(docs[0])
