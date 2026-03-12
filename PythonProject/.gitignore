@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDE files
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# FAISS index files
+*.index
+
+# Generated JSON files
+chunks.json
+metadata.json
+
+# Logs
+*.log
+
+# Environment variables
+.env
