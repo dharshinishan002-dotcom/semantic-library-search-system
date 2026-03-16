@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────
+#  requirements.txt
+#  PDF Semantic Search Project
+#
+#  Install all dependencies with:
+#      pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────
+
+# ── Web framework & server ────────────────────────────────────
+fastapi==0.111.0           # REST API framework
+uvicorn==0.30.1            # ASGI server to run FastAPI
+python-multipart==0.0.9    # Required for file upload (UploadFile)
+
+# ── Database ──────────────────────────────────────────────────
+pymongo==4.7.2             # MongoDB driver (includes bson for ObjectId)
+
+# ── PDF text extraction ───────────────────────────────────────
+pymupdf==1.24.5            # PyMuPDF — import as fitz
+
+# ── Embeddings ────────────────────────────────────────────────
+sentence-transformers==3.0.1   # Load BAAI/bge-base-en-v1.5 model
+torch==2.3.0                   # Required by sentence-transformers
+
+# ── Vector search ─────────────────────────────────────────────
+faiss-cpu==1.8.0           # Facebook AI Similarity Search (CPU version)
+
+# ── Numerical computing ───────────────────────────────────────
+numpy==1.26.4              # Array operations for embeddings
+
+# ── Utilities ─────────────────────────────────────────────────
+pydantic==2.7.1            # Data validation for FastAPI request models
