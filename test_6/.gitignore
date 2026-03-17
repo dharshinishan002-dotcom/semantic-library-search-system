@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────
+#  .gitignore
+#  ResearchLens — PDF Semantic Search Project
+# ─────────────────────────────────────────────────────────────
+
+
+# ── Generated index file (large binary — do not commit) ───────
+faiss_store.pkl
+
+
+# ── Old separate index files (replaced by faiss_store.pkl) ────
+faiss_index.index
+faiss_metadata.json
+metadata.json
+
+
+# ── Uploaded PDFs (user data — do not commit) ─────────────────
+uploaded_pdfs/
+
+
+# ── Original research PDFs (too large for git) ────────────────
+*.pdf
+
+
+# ── Python virtual environment ────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+
+# ── Python bytecode ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+
+# ── Environment variables & secrets ──────────────────────────
+.env
+.env.local
+.env.production
+*.env
+
+
+# ── IDE & editor files ────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+
+# ── macOS files ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+
+# ── Windows files ─────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+
+# ── Jupyter notebooks ─────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
