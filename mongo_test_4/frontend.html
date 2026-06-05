@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResearchLens — PDF Semantic Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ══════════════════════════════════════
+   LAVENDER THEME VARIABLES
+══════════════════════════════════════ */
+:root{
+  --bg:        #f4f0fb;
+  --surface:   #ffffff;
+  --surface2:  #f9f7fe;
+  --surface3:  #f0ebfb;
+  --border:    #e2d9f3;
+  --border2:   #cfc3ea;
+  --accent:    #7c4dff;
+  --accent2:   #9c6fff;
+  --accent-lt: rgba(124,77,255,.1);
+  --accent-glow: rgba(124,77,255,.2);
+  --green:     #22c98a;
+  --green-lt:  rgba(34,201,138,.12);
+  --red:       #f04f5e;
+  --red-lt:    rgba(240,79,94,.1);
+  --amber:     #f5a623;
+  --text:      #2d1f5e;
+  --text2:     #6b5b9a;
+  --text3:     #a99cc8;
+  --shadow:    0 2px 16px rgba(124,77,255,.08);
+  --shadow2:   0 8px 32px rgba(124,77,255,.14);
+  --r:         12px;
+  --r2:        18px;
+}
+
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:14px;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* lavender mesh background */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(124,77,255,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 90%, rgba(156,111,255,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(34,201,138,.04) 0%,transparent 70%);
+}
+
+.app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ══════════════════════════════════════
+   TOP NAV
+══════════════════════════════════════ */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:60px;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 1px 0 var(--border), var(--shadow);
+}
+
+.brand{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:16px;font-weight:800;color:var(--accent);letter-spacing:-.4px;
+}
+.brand-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;box-shadow:0 2px 8px var(--accent-glow);
+}
+
+.nav-tabs{display:flex;gap:4px}
+.ntab{
+  padding:7px 18px;border-radius:8px;border:none;
+  font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer;transition:all .18s;color:var(--text2);background:transparent;
+}
+.ntab:hover{background:var(--surface3);color:var(--text)}
+.ntab.active{background:var(--accent-lt);color:var(--accent)}
+
+.nav-right{display:flex;align-items:center;gap:10px}
+.stats-pill{
+  display:flex;align-items:center;gap:7px;
+  padding:5px 14px;border-radius:20px;
+  background:var(--surface3);border:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* buttons */
+.btn{
+  padding:8px 18px;border-radius:9px;border:none;
+  font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer;transition:all .18s;
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 10px var(--accent-glow)}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#f26370;transform:translateY(-1px);box-shadow:0 4px 14px var(--red-lt)}
+.btn-danger:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+main{display:flex;flex:1}
+
+/* SIDEBAR */
+.sidebar{
+  width:252px;min-width:252px;
+  background:rgba(255,255,255,.7);
+  backdrop-filter:blur(12px);
+  border-right:1px solid var(--border);
+  height:calc(100vh - 60px);
+  position:sticky;top:60px;overflow-y:auto;
+}
+.sb-sec{padding:16px 14px}
+.sb-label{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  text-transform:uppercase;letter-spacing:2px;color:var(--text3);
+  margin-bottom:10px;
+}
+.fi{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 9px;border-radius:9px;margin-bottom:2px;
+  cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);
+  border:1px solid transparent;transition:all .15s;
+}
+.fi:hover{background:var(--surface3);color:var(--text)}
+.fi.active{background:var(--accent-lt);border-color:rgba(124,77,255,.2);color:var(--accent)}
+.fi-ico{
+  width:22px;height:22px;border-radius:5px;flex-shrink:0;
+  background:var(--surface3);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:10px;
+}
+.fi-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px}
+
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.panel.active{display:flex}
+
+/* ══════════════════════════════════════
+   SEARCH PANEL
+══════════════════════════════════════ */
+.hero{
+  padding:44px 48px 32px;
+  background:linear-gradient(160deg,rgba(124,77,255,.06) 0%,transparent 60%);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;
+  background:var(--accent-lt);border:1px solid rgba(124,77,255,.2);
+  font-size:11px;font-weight:600;color:var(--accent);
+  margin-bottom:14px;
+}
+.hero-h1{
+  font-size:30px;font-weight:800;line-height:1.15;
+  letter-spacing:-.6px;margin-bottom:8px;color:var(--text);
+}
+.hero-h1 span{
+  background:linear-gradient(120deg,var(--accent),#c084fc);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{color:var(--text2);font-size:13px;margin-bottom:22px;line-height:1.6}
+
+/* search bar */
+.sbar-wrap{
+  display:flex;gap:10px;
+}
+.sbar{
+  flex:1;display:flex;align-items:center;
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:var(--r2);overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+  box-shadow:var(--shadow);
+}
+.sbar:focus-within{
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px var(--accent-lt);
+}
+.sbar-icon{padding:0 14px;color:var(--text3);font-size:16px;flex-shrink:0}
+#qInput{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text);font-size:14px;font-weight:500;
+  font-family:'Plus Jakarta Sans',sans-serif;padding:14px 8px;
+}
+#qInput::placeholder{color:var(--text3);font-weight:400}
+.sbar-btn{
+  margin:5px;padding:9px 22px;border-radius:12px;
+  background:var(--accent);color:#fff;border:none;
+  font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.sbar-btn:hover{background:var(--accent2)}
+.sbar-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.chips{margin-top:12px;display:flex;gap:7px;flex-wrap:wrap}
+.chip{
+  padding:4px 12px;border-radius:20px;
+  font-size:11px;font-weight:500;color:var(--text2);
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;
+}
+.chip:hover{color:var(--accent);border-color:rgba(124,77,255,.3);background:var(--accent-lt)}
+
+/* results */
+.results-area{flex:1;overflow-y:auto;padding:24px 48px}
+
+/* skeleton */
+.skel-list{display:flex;flex-direction:column;gap:10px}
+.skel-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;
+  position:relative;overflow:hidden;box-shadow:var(--shadow);
+}
+.skel-card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(124,77,255,.04),transparent);
+  animation:shim 1.5s infinite;
+}
+@keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.sl{height:10px;background:var(--surface3);border-radius:3px;margin-bottom:8px}
+.sl.a{width:35%}.sl.b{width:75%}.sl.c{width:55%}
+
+/* empty */
+.empty-state{text-align:center;padding:72px 20px;color:var(--text3)}
+.es-icon{font-size:40px;margin-bottom:14px;opacity:.5}
+.es-title{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.es-body{font-size:12px;line-height:1.7;max-width:260px;margin:0 auto;color:var(--text3)}
+
+/* result bar */
+.rbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.rcount{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)}
+.rcount em{color:var(--accent);font-style:normal;font-weight:600}
+
+/* ── Result Card ── */
+.rcard{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:18px 20px;margin-bottom:10px;
+  box-shadow:var(--shadow);
+  transition:border-color .18s,transform .18s,box-shadow .18s;
+  animation:up .28s ease both;
+}
+.rcard:hover{border-color:rgba(124,77,255,.3);transform:translateY(-2px);box-shadow:var(--shadow2)}
+.rcard:nth-child(1){animation-delay:.03s}.rcard:nth-child(2){animation-delay:.06s}
+.rcard:nth-child(3){animation-delay:.09s}.rcard:nth-child(4){animation-delay:.12s}
+.rcard:nth-child(5){animation-delay:.15s}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.rcard-top{display:flex;align-items:center;gap:7px;margin-bottom:11px;flex-wrap:wrap}
+.rnum{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  background:var(--accent-lt);border:1px solid rgba(124,77,255,.2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Clickable PDF badge */
+.pdf-link{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:6px;
+  background:var(--accent-lt);border:1px solid rgba(124,77,255,.2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;color:var(--accent);
+  cursor:pointer;transition:all .18s;text-decoration:none;
+}
+.pdf-link:hover{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+  transform:translateY(-1px);box-shadow:0 3px 10px var(--accent-glow);
+}
+.pdf-link .open-icon{font-size:9px;opacity:.7}
+
+.badge-pg{
+  padding:3px 10px;border-radius:6px;
+  background:var(--green-lt);border:1px solid rgba(34,201,138,.2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);font-weight:500;
+}
+.score-wrap{margin-left:auto;display:flex;align-items:center;gap:7px}
+.sbar2{width:52px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.sbar2-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.sval{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+
+.rcard-body{
+  font-size:13px;line-height:1.78;color:var(--text2);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.rcard-body.open{-webkit-line-clamp:unset}
+.rcard-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.expand-btn{
+  background:none;border:none;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);
+  transition:color .15s;
+}
+.expand-btn:hover{color:var(--accent)}
+.open-pdf-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:6px;
+  background:var(--accent-lt);border:1px solid rgba(124,77,255,.2);
+  font-size:11px;font-weight:600;color:var(--accent);
+  cursor:pointer;text-decoration:none;transition:all .18s;
+}
+.open-pdf-btn:hover{background:var(--accent);color:#fff;box-shadow:0 3px 10px var(--accent-glow)}
+
+/* ══════════════════════════════════════
+   MANAGE PANEL
+══════════════════════════════════════ */
+.manage-area{flex:1;overflow-y:auto;padding:28px 48px}
+.manage-grid{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+
+/* Upload card */
+.up-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r2);padding:24px;
+  box-shadow:var(--shadow);position:sticky;top:24px;
+}
+.card-title{font-size:15px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px;color:var(--text)}
+.card-sub{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px}
+
+.dropzone{
+  border:2px dashed var(--border2);border-radius:var(--r);
+  padding:30px 16px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;margin-bottom:14px;
+  background:var(--surface2);
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:var(--accent-lt)}
+.dz-icon{font-size:28px;margin-bottom:8px;opacity:.6}
+.dz-text{font-size:12px;color:var(--text2);line-height:1.6}
+.dz-text b{color:var(--accent);font-weight:600}
+.dz-hint{font-size:10px;color:var(--text3);margin-top:4px}
+#fileIn{display:none}
+
+.file-preview{
+  display:none;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:12px;
+}
+.fp-icon{font-size:20px;flex-shrink:0}
+.fp-info{flex:1;min-width:0}
+.fp-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp-size{font-size:10px;color:var(--text3)}
+.fp-clear{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;transition:color .15s;flex-shrink:0}
+.fp-clear:hover{color:var(--red)}
+
+.status-bar{
+  display:none;padding:9px 12px;border-radius:8px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:12px;
+}
+.status-bar.loading{background:rgba(124,77,255,.08);color:var(--accent);border:1px solid rgba(124,77,255,.2)}
+.status-bar.ok{background:var(--green-lt);color:var(--green);border:1px solid rgba(34,201,138,.25)}
+.status-bar.err{background:var(--red-lt);color:var(--red);border:1px solid rgba(240,79,94,.25)}
+
+/* Library list */
+.lib-panel{display:flex;flex-direction:column;gap:10px}
+.lib-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.lib-title{font-size:15px;font-weight:700;color:var(--text)}
+.lib-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);margin-top:2px}
+
+/* PDF row */
+.pdf-row{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:var(--shadow);
+  transition:all .18s;animation:up .25s ease both;
+}
+.pdf-row:hover{border-color:rgba(124,77,255,.25);box-shadow:var(--shadow2);transform:translateX(3px)}
+.pdf-row.removing{opacity:.25;pointer-events:none;transition:opacity .3s}
+
+.pr-icon{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent-lt),rgba(192,132,252,.12));
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.pr-info{flex:1;min-width:0}
+.pr-name{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;
+  color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  margin-bottom:4px;
+}
+.pr-meta{display:flex;gap:14px}
+.pr-meta span{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:3px}
+
+.pr-actions{display:flex;gap:7px;flex-shrink:0}
+
+/* Open PDF button in library */
+.pr-open{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 12px;border-radius:7px;
+  background:var(--accent-lt);border:1px solid rgba(124,77,255,.2);
+  font-size:11px;font-weight:600;color:var(--accent);
+  cursor:pointer;text-decoration:none;transition:all .18s;
+}
+.pr-open:hover{background:var(--accent);color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
+
+/* Delete icon button */
+.del-icon-btn{
+  width:30px;height:30px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;border:none;
+  background:var(--red-lt);border:1px solid rgba(240,79,94,.2);
+  color:var(--red);transition:all .18s;
+}
+.del-icon-btn:hover{background:var(--red);color:#fff;box-shadow:0 2px 8px var(--red-lt);transform:scale(1.08)}
+.del-icon-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+
+/* ══════════════════════════════════════
+   DELETE CONFIRM MODAL
+══════════════════════════════════════ */
+.overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(45,31,94,.4);backdrop-filter:blur(10px);
+  align-items:center;justify-content:center;
+}
+.overlay.open{display:flex}
+
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r2);padding:28px;
+  width:420px;max-width:92vw;
+  box-shadow:0 20px 60px rgba(124,77,255,.15);
+  animation:pop .2s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+
+.modal-icon{font-size:32px;margin-bottom:12px}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:6px;color:var(--text)}
+.modal-body{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px}
+.modal-target{
+  background:var(--red-lt);border:1px solid rgba(240,79,94,.2);
+  border-radius:8px;padding:10px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);
+  word-break:break-all;margin-bottom:16px;
+}
+.modal-list{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;margin-bottom:18px;
+}
+.modal-list li{
+  font-size:11px;color:var(--text2);line-height:1.9;
+  list-style:none;display:flex;align-items:center;gap:7px;
+}
+.modal-list li::before{content:'×';color:var(--red);font-weight:700}
+.del-status{
+  display:none;padding:9px 12px;border-radius:8px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:14px;
+}
+.del-status.loading{background:rgba(124,77,255,.08);color:var(--accent);border:1px solid rgba(124,77,255,.2)}
+.del-status.ok{background:var(--green-lt);color:var(--green);border:1px solid rgba(34,201,138,.25)}
+.del-status.err{background:var(--red-lt);color:var(--red);border:1px solid rgba(240,79,94,.25)}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end}
+
+/* ══════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════ */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent2)}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media(max-width:960px){
+  .sidebar{display:none}
+  .manage-grid{grid-template-columns:1fr}
+  .hero,.results-area,.manage-area{padding-left:20px;padding-right:20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════ NAV ══════════ -->
+<nav>
+  <div class="brand">
+    <div class="brand-icon">🔬</div>
+    ResearchLens
+  </div>
+
+  <div class="nav-tabs">
+    <button class="ntab active" id="nt-search" onclick="switchTab('search')">🔍 Search</button>
+    <button class="ntab"        id="nt-manage" onclick="switchTab('manage')">📁 Manage PDFs</button>
+  </div>
+
+  <div class="nav-right">
+    <div class="stats-pill">
+      <div class="live-dot"></div>
+      <span id="hPdfs">—</span> PDFs &nbsp;·&nbsp; <span id="hChunks">—</span> chunks
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside class="sidebar">
+    <div class="sb-sec">
+      <div class="sb-label">Filter by PDF</div>
+      <div id="filterList">
+        <div class="fi active" data-f="" onclick="setFilter(this,'')">
+          <div class="fi-ico">⊞</div>
+          <span class="fi-name">All PDFs</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ CONTENT ══════════ -->
+  <div class="content">
+
+    <!-- ─── SEARCH PANEL ─── -->
+    <div class="panel active" id="p-search">
+      <div class="hero">
+        <div class="hero-badge">✦ Semantic Search Engine</div>
+        <h1 class="hero-h1">Ask anything across<br/><span>research papers</span></h1>
+        <p class="hero-sub">Powered by FAISS · BAAI/bge-base-en-v1.5 · Click any result to open the PDF</p>
+
+        <div class="sbar-wrap">
+          <div class="sbar">
+            <div class="sbar-icon">⌕</div>
+            <input id="qInput" type="text"
+              placeholder="e.g. What is meta-reinforcement learning?"
+              onkeydown="if(event.key==='Enter') doSearch()"/>
+            <button class="sbar-btn" id="searchBtn" onclick="doSearch()">Search</button>
+          </div>
+        </div>
+
+        <div class="chips">
+          <span class="chip" onclick="fill('What is meta-reinforcement learning?')">meta-reinforcement learning</span>
+          <span class="chip" onclick="fill('How does the attention mechanism work?')">attention mechanism</span>
+          <span class="chip" onclick="fill('What are the limitations of this approach?')">limitations</span>
+          <span class="chip" onclick="fill('Experimental results and benchmarks')">evaluation results</span>
+          <span class="chip" onclick="fill('What datasets were used for training?')">training datasets</span>
+        </div>
+      </div>
+
+      <div class="results-area" id="resultsArea">
+        <div class="empty-state">
+          <div class="es-icon">◎</div>
+          <div class="es-title">Ready to search</div>
+          <div class="es-body">Type a research question above and press Search.<br/>Click the PDF badge on any result to open that PDF directly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── MANAGE PANEL ─── -->
+    <div class="panel" id="p-manage">
+      <div class="manage-area">
+        <div class="manage-grid">
+
+          <!-- Upload card -->
+          <div class="up-card">
+            <div class="card-title">📤 Upload PDF</div>
+            <div class="card-sub">Add a new research paper. It will be extracted, chunked, embedded, and made searchable automatically.</div>
+
+            <div class="dropzone" id="dropzone"
+                 onclick="document.getElementById('fileIn').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="onDrop(event)">
+              <div class="dz-icon">📂</div>
+              <div class="dz-text"><b>Click to browse</b> or drag &amp; drop</div>
+              <div class="dz-hint">Only .pdf files · Max 50MB</div>
+            </div>
+            <input type="file" id="fileIn" accept=".pdf" onchange="onFilePick(event)"/>
+
+            <div class="file-preview" id="filePreview">
+              <div class="fp-icon">📄</div>
+              <div class="fp-info">
+                <div class="fp-name" id="fpName">—</div>
+                <div class="fp-size" id="fpSize">—</div>
+              </div>
+              <button class="fp-clear" onclick="clearFile()">✕</button>
+            </div>
+
+            <div class="status-bar" id="upStatus"></div>
+
+            <button class="btn btn-primary" id="upBtn" onclick="doUpload()" disabled style="width:100%">
+              ↑ &nbsp;Upload &amp; Index
+            </button>
+          </div>
+
+          <!-- Library -->
+          <div class="lib-panel">
+            <div class="lib-head">
+              <div>
+                <div class="lib-title">📚 PDF Library</div>
+                <div class="lib-sub" id="libSub">Loading…</div>
+              </div>
+            </div>
+            <div id="libList">
+              <div class="empty-state"><div class="es-icon">📂</div><div class="es-title">Loading…</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ══════════ DELETE MODAL ══════════ -->
+<div class="overlay" id="delModal">
+  <div class="modal">
+    <div class="modal-icon">🗑</div>
+    <div class="modal-title">Delete this PDF?</div>
+    <div class="modal-body">This will permanently remove the file from all systems. This action cannot be undone.</div>
+    <div class="modal-target" id="delTarget">—</div>
+    <ul class="modal-list">
+      <li>MongoDB database record</li>
+      <li>FAISS search index vectors</li>
+      <li>All indexed text chunks</li>
+      <li>Physical file on disk (if uploaded via app)</li>
+    </ul>
+    <div class="del-status" id="delStatus"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="delCancelBtn" onclick="closeDelModal()">Cancel</button>
+      <button class="btn btn-danger" id="delConfirmBtn" onclick="doDelete()">Delete permanently</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Config ─────────────────────────────────── */
+const API = 'http://localhost:8000';
+let activeFilter = '';
+let pickedFile   = null;
+let pending      = { id: null, name: null, rowEl: null };
+
+/* ── Boot ───────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => { loadStats(); loadPdfs(); });
+
+/* ── Stats ──────────────────────────────────── */
+async function loadStats() {
+  try {
+    const d = await get('/api/stats');
+    document.getElementById('hPdfs').textContent   = d.total_pdfs;
+    document.getElementById('hChunks').textContent = d.total_chunks.toLocaleString();
+  } catch { document.getElementById('hPdfs').textContent = 'offline'; }
+}
+
+/* ── PDFs ───────────────────────────────────── */
+async function loadPdfs() {
+  try {
+    const d = await get('/api/pdfs');
+    buildSidebar(d.pdfs);
+    buildLibrary(d.pdfs);
+    document.getElementById('libSub').textContent =
+      `${d.total} document${d.total !== 1 ? 's' : ''} indexed`;
+  } catch {
+    document.getElementById('libList').innerHTML =
+      `<div class="empty-state"><div class="es-icon">⚠️</div>
+       <div class="es-title">Backend offline</div>
+       <div class="es-body">Run: uvicorn main:app --reload --port 8000</div></div>`;
+  }
+}
+
+function buildSidebar(pdfs) {
+  const list = document.getElementById('filterList');
+  list.innerHTML = `<div class="fi active" data-f="" onclick="setFilter(this,'')">
+    <div class="fi-ico">⊞</div><span class="fi-name">All PDFs</span></div>`;
+  pdfs.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'fi'; el.dataset.f = p.filename;
+    el.onclick = () => setFilter(el, p.filename);
+    el.innerHTML = `<div class="fi-ico">📄</div>
+      <span class="fi-name" title="${p.filename}">${p.filename}</span>`;
+    list.appendChild(el);
+  });
+}
+
+function buildLibrary(pdfs) {
+  const list = document.getElementById('libList');
+  if (!pdfs.length) {
+    list.innerHTML = `<div class="empty-state"><div class="es-icon">📂</div>
+      <div class="es-title">No PDFs yet</div>
+      <div class="es-body">Upload your first PDF using the form on the left.</div></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  pdfs.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'pdf-row';
+    row.id        = `row-${p.id}`;
+    row.style.animationDelay = `${i * 0.025}s`;
+    row.innerHTML = `
+      <div class="pr-icon">📄</div>
+      <div class="pr-info">
+        <div class="pr-name" title="${p.filename}">${p.filename}</div>
+        <div class="pr-meta">
+          <span>📦 ${p.num_chunks || '—'} chunks</span>
+          <span>📅 ${p.uploaded_at ? p.uploaded_at.split('T')[0] : '—'}</span>
+        </div>
+      </div>
+      <div class="pr-actions">
+        <a class="pr-open" href="${API}/api/pdf/${p.id}" target="_blank" title="Open PDF">
+          📖 Open
+        </a>
+        <button class="del-icon-btn" title="Delete ${p.filename}"
+                onclick="askDelete('${p.id}','${esc(p.filename)}')">🗑</button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+/* ── Filter ─────────────────────────────────── */
+function setFilter(el, val) {
+  activeFilter = val;
+  document.querySelectorAll('.fi').forEach(f => f.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ── Tabs ───────────────────────────────────── */
+function switchTab(name) {
+  ['search','manage'].forEach(n => {
+    document.getElementById(`nt-${n}`).classList.toggle('active', n === name);
+    document.getElementById(`p-${n}`).classList.toggle('active', n === name);
+  });
+}
+
+/* ── Search ─────────────────────────────────── */
+function fill(q) { document.getElementById('qInput').value = q; doSearch(); }
+
+async function doSearch() {
+  const q = document.getElementById('qInput').value.trim();
+  if (!q) return;
+  const btn  = document.getElementById('searchBtn');
+  const area = document.getElementById('resultsArea');
+  btn.disabled = true; btn.textContent = 'Searching…';
+  area.innerHTML = skels();
+  try {
+    const data = await post('/api/search', { query: q, top_k: 5, pdf_filter: activeFilter });
+    renderResults(data);
+  } catch(e) {
+    area.innerHTML = errState(e.message);
+  } finally { btn.disabled = false; btn.textContent = 'Search'; }
+}
+
+function skels() {
+  return `<div class="skel-list">${[1,2,3].map(() =>
+    `<div class="skel-card"><div class="sl a"></div><div class="sl b"></div><div class="sl c"></div></div>`
+  ).join('')}</div>`;
+}
+
+function renderResults(data) {
+  const area = document.getElementById('resultsArea');
+  if (!data.results.length) {
+    area.innerHTML = `<div class="empty-state"><div class="es-icon">◌</div>
+      <div class="es-title">No results found</div>
+      <div class="es-body">Try rephrasing your question or clear the PDF filter.</div></div>`;
+    return;
+  }
+
+  const bar = `<div class="rbar"><div class="rcount">
+    <em>${data.results.length}</em> result${data.results.length>1?'s':''} for "${esc(data.query)}"
+    &nbsp;·&nbsp; <span style="color:var(--accent);font-size:10px">Click PDF name to open ↗</span>
+  </div></div>`;
+
+  const cards = data.results.map((r, i) => {
+    const pct  = Math.round(r.score * 100);
+    const col  = r.score > .72 ? 'var(--green)' : r.score > .60 ? 'var(--accent)' : 'var(--amber)';
+    // Find pdf_id from sidebar data to build open link
+    const pdfId = getPdfId(r.pdf_name);
+    const openUrl = pdfId ? `${API}/api/pdf/${pdfId}` : null;
+
+    return `<div class="rcard">
+      <div class="rcard-top">
+        <div class="rnum">${i+1}</div>
+        ${openUrl
+          ? `<a class="pdf-link" href="${openUrl}" target="_blank" title="Open PDF">
+               📄 ${esc(r.pdf_name)} <span class="open-icon">↗</span>
+             </a>`
+          : `<span class="pdf-link">📄 ${esc(r.pdf_name)}</span>`
+        }
+        <span class="badge-pg">pg ${r.page_number}</span>
+        <div class="score-wrap">
+          <div class="sbar2"><div class="sbar2-fill" style="width:${pct}%;background:${col}"></div></div>
+          <span class="sval">${pct}%</span>
+        </div>
+      </div>
+      <div class="rcard-body" id="rb${i}">${esc(r.chunk_text)}</div>
+      <div class="rcard-foot">
+        <button class="expand-btn" onclick="toggleExpand('rb${i}',this)">show more ↓</button>
+        ${openUrl
+          ? `<a class="open-pdf-btn" href="${openUrl}" target="_blank">📖 Open PDF ↗</a>`
+          : ''
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  area.innerHTML = bar + cards;
+}
+
+/* store pdfs globally so search results can look up pdf_id by filename */
+let allPdfs = [];
+async function loadPdfs() {
+  try {
+    const d = await get('/api/pdfs');
+    allPdfs = d.pdfs;
+    buildSidebar(d.pdfs);
+    buildLibrary(d.pdfs);
+    document.getElementById('libSub').textContent =
+      `${d.total} document${d.total !== 1 ? 's' : ''} indexed`;
+  } catch {
+    document.getElementById('libList').innerHTML =
+      `<div class="empty-state"><div class="es-icon">⚠️</div>
+       <div class="es-title">Backend offline</div>
+       <div class="es-body">Run: uvicorn main:app --reload --port 8000</div></div>`;
+  }
+}
+
+function getPdfId(filename) {
+  const found = allPdfs.find(p => p.filename === filename);
+  return found ? found.id : null;
+}
+
+function toggleExpand(id, btn) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'show less ↑' : 'show more ↓';
+}
+
+/* ══════════════════════════════════════
+   UPLOAD
+══════════════════════════════════════ */
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.pdf')) attachFile(f);
+}
+function onFilePick(e) { const f = e.target.files[0]; if (f) attachFile(f); }
+function attachFile(f) {
+  pickedFile = f;
+  document.getElementById('fpName').textContent = f.name;
+  document.getElementById('fpSize').textContent = `${(f.size/1024).toFixed(1)} KB`;
+  document.getElementById('filePreview').style.display = 'flex';
+  document.getElementById('upBtn').disabled = false;
+  hideStatus('upStatus');
+}
+function clearFile() {
+  pickedFile = null;
+  document.getElementById('filePreview').style.display = 'none';
+  document.getElementById('upBtn').disabled = true;
+  document.getElementById('fileIn').value = '';
+  hideStatus('upStatus');
+}
+
+async function doUpload() {
+  if (!pickedFile) return;
+  const btn = document.getElementById('upBtn');
+  btn.disabled = true;
+  showStatus('upStatus','loading',`⏳  Uploading "${pickedFile.name}" and indexing…`);
+  const form = new FormData();
+  form.append('file', pickedFile);
+  try {
+    const data = await postForm('/api/upload', form);
+    showStatus('upStatus','ok',`✓  ${data.message}  (${data.chunks} chunks added)`);
+    clearFile(); loadStats(); loadPdfs();
+  } catch(e) {
+    showStatus('upStatus','err',`✗  ${e.message}`);
+    btn.disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════
+   DELETE
+══════════════════════════════════════ */
+function askDelete(id, name) {
+  pending = { id, name, rowEl: document.getElementById(`row-${id}`) };
+  document.getElementById('delTarget').textContent = name;
+  hideStatus('delStatus');
+  document.getElementById('delConfirmBtn').disabled = false;
+  document.getElementById('delCancelBtn').disabled  = false;
+  document.getElementById('delModal').classList.add('open');
+}
+function closeDelModal() {
+  document.getElementById('delModal').classList.remove('open');
+  pending = { id:null, name:null, rowEl:null };
+}
+async function doDelete() {
+  const { id, name, rowEl } = pending;
+  if (!id) return;
+  document.getElementById('delConfirmBtn').disabled = true;
+  document.getElementById('delCancelBtn').disabled  = true;
+  showStatus('delStatus','loading',`⏳  Deleting "${name}" and rebuilding index…`);
+  if (rowEl) rowEl.classList.add('removing');
+  try {
+    const data = await del(`/api/delete/${id}`);
+    showStatus('delStatus','ok',`✓  ${data.message}  (${data.chunks_removed} chunks removed)`);
+    if (rowEl) rowEl.remove();
+    loadStats(); loadPdfs();
+    setTimeout(closeDelModal, 1800);
+  } catch(e) {
+    showStatus('delStatus','err',`✗  ${e.message}`);
+    if (rowEl) rowEl.classList.remove('removing');
+    document.getElementById('delConfirmBtn').disabled = false;
+    document.getElementById('delCancelBtn').disabled  = false;
+  }
+}
+
+/* ══════════════════════════════════════
+   HTTP HELPERS
+══════════════════════════════════════ */
+async function get(path) {
+  const r = await fetch(API + path);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail || 'Failed');
+  return d;
+}
+async function post(path, body) {
+  const r = await fetch(API + path, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail || 'Failed');
+  return d;
+}
+async function postForm(path, form) {
+  const r = await fetch(API + path, { method:'POST', body:form });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail || 'Upload failed');
+  return d;
+}
+async function del(path) {
+  const r = await fetch(API + path, { method:'DELETE' });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail || 'Delete failed');
+  return d;
+}
+
+function showStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = `status-bar ${type}`;
+  el.textContent = msg;
+}
+function hideStatus(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'none';
+  el.className = 'status-bar';
+}
+function errState(msg) {
+  return `<div class="empty-state"><div class="es-icon">⚠️</div>
+    <div class="es-title">Error</div><div class="es-body">${esc(msg)}</div></div>`;
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
